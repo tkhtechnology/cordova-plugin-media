@@ -378,7 +378,21 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
                 }
 
                 NSString* sessionCategory = bPlayAudioWhenScreenIsLocked ? AVAudioSessionCategoryPlayback : AVAudioSessionCategorySoloAmbient;
-                [self.avSession setCategory:sessionCategory error:&err];
+                NSString* output = [options objectForKey:@"output"];
+                if (output != nil) {
+                    NSLog(@"strOutput:%@", output);
+                    if([output isEqualToString:@"earpiece"]) {
+                        [self.avSession setCategory:AVAudioSessionCategoryPlayAndRecord
+                                        withOptions:AVAudioSessionPortOverrideSpeaker error:&err];
+                    }
+                    if([output isEqualToString:@"speaker"]) {
+                        [self.avSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:&err];
+                    }
+                } else {
+                    NSLog(@"bPlayAudioWhenScreenIsLocked:%@", sessionCategory);
+                    [self.avSession setCategory:sessionCategory error:&err];
+                }
+
                 if (![self.avSession setActive:YES error:&err]) {
                     // other audio with higher priority that does not allow mixing could cause this to fail
                     NSLog(@"Unable to play audio: %@", [err localizedFailureReason]);
@@ -860,7 +874,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
 {
     /* https://issues.apache.org/jira/browse/CB-11513 */
     NSMutableArray* keysToRemove = [[NSMutableArray alloc] init];
-    
+
     for(id key in [self soundCache]) {
         CDVAudioFile* audioFile = [[self soundCache] objectForKey:key];
         if (audioFile != nil) {
@@ -872,9 +886,9 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             }
         }
     }
-    
+
     [[self soundCache] removeObjectsForKeys:keysToRemove];
-    
+
     // [[self soundCache] removeAllObjects];
     // [self setSoundCache:nil];
     [self setAvSession:nil];
