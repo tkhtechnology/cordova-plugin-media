@@ -138,7 +138,14 @@ public class AudioHandler extends CordovaPlugin {
             } catch (IllegalArgumentException e) {
                 fileUriStr = target;
             }
-            this.startPlayingAudio(args.getString(0), FileHelper.stripFileProtocol(fileUriStr));
+            String output = AudioPlayer.OUTPUT_SPEAKER;
+            try {
+                JSONObject options = args.getJSONObject(2);
+                output = options.getString("output");
+            } catch (JSONException e) {
+                LOG.d(TAG, "Error when transform JSON object" + e);
+            }
+            this.startPlayingAudio(args.getString(0), FileHelper.stripFileProtocol(fileUriStr), output);
         }
         else if (action.equals("seekToAudio")) {
             this.seekToAudio(args.getString(0), args.getInt(1));
@@ -244,7 +251,7 @@ public class AudioHandler extends CordovaPlugin {
             // If phone idle, then resume playing those players we paused
             else if ("idle".equals(data)) {
                 for (AudioPlayer audio : this.pausedForPhone) {
-                    audio.startPlaying(null);
+                    audio.startPlaying(null, AudioPlayer.OUTPUT_NO_CHANGE);
                 }
                 this.pausedForPhone.clear();
             }
@@ -321,10 +328,11 @@ public class AudioHandler extends CordovaPlugin {
      * Start or resume playing audio file.
      * @param id				The id of the audio player
      * @param file				The name of the audio file.
+     * @param output			Output device type.
      */
-    public void startPlayingAudio(String id, String file) {
+    public void startPlayingAudio(String id, String file, String output) {
         AudioPlayer audio = getOrCreatePlayer(id, file);
-        audio.startPlaying(file);
+        audio.startPlaying(file, output);
         getAudioFocus();
     }
 
@@ -496,7 +504,7 @@ public class AudioHandler extends CordovaPlugin {
 
     /**
      * Set the playback rate of an audio file
-     * 
+     *
      * @param id   The id of the audio player
      * @param rate The playback rate
      */
@@ -509,7 +517,7 @@ public class AudioHandler extends CordovaPlugin {
             LOG.e(TAG3, "Unknown Audio Player " + id);
         }
     }
-    
+
 
     private void onFirstPlayerCreated() {
         origVolumeStream = cordova.getActivity().getVolumeControlStream();

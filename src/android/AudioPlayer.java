@@ -79,6 +79,11 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 //    private static int MEDIA_ERR_DECODE         = 3;
 //    private static int MEDIA_ERR_NONE_SUPPORTED = 4;
 
+    // Output device types
+    public static String OUTPUT_SPEAKER = "speaker";
+    public static String OUTPUT_EARPIECE = "earpiece";
+    public static String OUTPUT_NO_CHANGE = "noChange";
+
     private AudioHandler handler;           // The AudioHandler object
     private Context context;                // The Application Context object
     private String id;                      // The id of this player (used to identify Media object in JavaScript)
@@ -86,6 +91,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private STATE state = STATE.MEDIA_NONE; // State of recording or playback
 
     private String audioFile = null;        // File name to play or record to
+    private String outputType = OUTPUT_SPEAKER; // Output device: speaker/earpiece
     private float duration = -1;            // Duration of audio
 
     private MediaRecorder recorder = null;  // Audio recording object
@@ -228,7 +234,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                         copy(inputStream, outputStream, false);
                     } catch (Exception e) {
                         LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
-                   } finally {
+                    } finally {
                         if (inputStream != null) try {
                             inputStream.close();
                             inputFile.delete();
@@ -346,8 +352,12 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * Start or resume playing audio file.
      *
      * @param file              The name of the audio file.
+     * @param output            Type of output device: speaker/earpiece/no change
      */
-    public void startPlaying(String file) {
+    public void startPlaying(String file, String output) {
+        if (!output.equals(OUTPUT_NO_CHANGE)) {
+            this.outputType = output;
+        }
         if (this.readyPlayer(file) && this.player != null) {
             this.player.start();
             this.setState(STATE.MEDIA_RUNNING);
@@ -409,7 +419,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * Resume playing.
      */
     public void resumePlaying() {
-    	this.startPlaying(this.audioFile);
+        this.startPlaying(this.audioFile, OUTPUT_NO_CHANGE);
     }
 
     /**
@@ -477,7 +487,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         // If no player yet, then create one
         else {
             this.prepareOnly = true;
-            this.startPlaying(file);
+            this.startPlaying(file, OUTPUT_NO_CHANGE);
 
             // This will only return value for local, since streaming
             // file hasn't been read yet.
@@ -599,15 +609,15 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      */
     private boolean playMode() {
         switch(this.mode) {
-        case NONE:
-            this.setMode(MODE.PLAY);
-            break;
-        case PLAY:
-            break;
-        case RECORD:
-            String errorMessage = "AudioPlayer Error: Can't play in record mode.";
-            sendErrorStatus(MEDIA_ERR_ABORTED, errorMessage);
-            return false; //player is not ready
+            case NONE:
+                this.setMode(MODE.PLAY);
+                break;
+            case PLAY:
+                break;
+            case RECORD:
+                String errorMessage = "AudioPlayer Error: Can't play in record mode.";
+                sendErrorStatus(MEDIA_ERR_ABORTED, errorMessage);
+                return false; //player is not ready
         }
         return true;
     }
@@ -619,11 +629,20 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      */
     private boolean readyPlayer(String file) {
         if (playMode()) {
+            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            boolean setSpeakerphone = !this.outputType.equals(OUTPUT_EARPIECE);
             switch (this.state) {
                 case MEDIA_NONE:
                     if (this.player == null) {
+                        audioManager.setSpeakerphoneOn(setSpeakerphone);
+                        LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
                         this.player = new MediaPlayer();
                         this.player.setOnErrorListener(this);
+                        if (setSpeakerphone) {
+                            this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                        } else {
+                            this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+                        }
                     }
                     try {
                         this.loadAudioFile(file);
@@ -645,9 +664,16 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                     if (file!=null && this.audioFile.compareTo(file) == 0) {
                         //maybe it was recording?
                         if (player == null) {
+                            audioManager.setSpeakerphoneOn(false);
+                            LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
                             this.player = new MediaPlayer();
                             this.player.setOnErrorListener(this);
                             this.prepareOnly = false;
+                            if (setSpeakerphone) {
+                                this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                            } else {
+                                this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+                            }
 
                             try {
                                 this.loadAudioFile(file);
@@ -657,7 +683,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                             return false;//we´re not ready yet
                         }
                         else {
-                           //reset the audio file
+                            //reset the audio file
                             player.seekTo(0);
                             player.pause();
                             return true;
@@ -715,12 +741,12 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                     this.player.setDataSource(createAudioFilePath(file));
                 }
             }
-                this.setState(STATE.MEDIA_STARTING);
-                this.player.setOnPreparedListener(this);
-                this.player.prepare();
+            this.setState(STATE.MEDIA_STARTING);
+            this.player.setOnPreparedListener(this);
+            this.player.prepare();
 
-                // Get duration
-                this.duration = getDurationInSeconds();
+            // Get duration
+            this.duration = getDurationInSeconds();
             }
     }
 
