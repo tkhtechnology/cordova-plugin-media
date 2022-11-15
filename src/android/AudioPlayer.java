@@ -355,7 +355,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * @param output            Type of output device: speaker/earpiece/no change
      */
     public void startPlaying(String file, String output) {
-        if (!output.equals(OUTPUT_NO_CHANGE)) {
+        if (output != null && !output.equals(OUTPUT_NO_CHANGE)) {
             this.outputType = output;
         }
         if (this.readyPlayer(file) && this.player != null) {
@@ -629,20 +629,12 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      */
     private boolean readyPlayer(String file) {
         if (playMode()) {
-            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-            boolean setSpeakerphone = !this.outputType.equals(OUTPUT_EARPIECE);
             switch (this.state) {
                 case MEDIA_NONE:
                     if (this.player == null) {
-                        audioManager.setSpeakerphoneOn(setSpeakerphone);
-                        LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
                         this.player = new MediaPlayer();
                         this.player.setOnErrorListener(this);
-                        if (setSpeakerphone) {
-                            this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                        } else {
-                            this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
-                        }
+                        this.setOutput();
                     }
                     try {
                         this.loadAudioFile(file);
@@ -664,16 +656,10 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                     if (file!=null && this.audioFile.compareTo(file) == 0) {
                         //maybe it was recording?
                         if (player == null) {
-                            audioManager.setSpeakerphoneOn(false);
-                            LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
                             this.player = new MediaPlayer();
                             this.player.setOnErrorListener(this);
+                            this.setOutput();
                             this.prepareOnly = false;
-                            if (setSpeakerphone) {
-                                this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                            } else {
-                                this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
-                            }
 
                             try {
                                 this.loadAudioFile(file);
@@ -705,6 +691,23 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
             }
         }
         return false;
+    }
+
+    /**
+     * Sets output device to earpiece or speaker
+     */
+    private void setOutput() {
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        boolean isSpeakerphone = !this.outputType.equals(OUTPUT_EARPIECE);
+        audioManager.setSpeakerphoneOn(isSpeakerphone);
+        if (this.player != null) {
+            if (isSpeakerphone) {
+                this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            } else {
+                this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+            }
+        }
+        LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
     }
 
     /**
