@@ -663,7 +663,6 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                             return true;
                         }
                     } else {
-                        // MX002-7444 prevent app crash
                         if (this.player == null) {
                             return false;
                         }
