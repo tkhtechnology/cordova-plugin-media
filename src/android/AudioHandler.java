@@ -138,7 +138,7 @@ public class AudioHandler extends CordovaPlugin {
             } catch (IllegalArgumentException e) {
                 fileUriStr = target;
             }
-            String output = AudioPlayer.OUTPUT_SPEAKER;
+            String output = AudioPlayer.OUTPUT_NO_CHANGE;
             try {
                 JSONObject options = args.getJSONObject(2);
                 output = options.getString("output");
