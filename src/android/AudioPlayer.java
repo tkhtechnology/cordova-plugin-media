@@ -57,12 +57,12 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
     // AudioPlayer states
     public enum STATE { MEDIA_NONE,
-                        MEDIA_STARTING,
-                        MEDIA_RUNNING,
-                        MEDIA_PAUSED,
-                        MEDIA_STOPPED,
-                        MEDIA_LOADING
-                      };
+        MEDIA_STARTING,
+        MEDIA_RUNNING,
+        MEDIA_PAUSED,
+        MEDIA_STOPPED,
+        MEDIA_LOADING
+    };
 
     private static final String LOG_TAG = "AudioPlayer";
 
@@ -91,7 +91,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private STATE state = STATE.MEDIA_NONE; // State of recording or playback
 
     private String audioFile = null;        // File name to play or record to
-    private String outputType = OUTPUT_SPEAKER; // Output device: speaker/earpiece
+    private String outputType = OUTPUT_NO_CHANGE; // Output device: speaker/earpiece
     private float duration = -1;            // Duration of audio
 
     private MediaRecorder recorder = null;  // Audio recording object
@@ -166,34 +166,34 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     public void startRecording(String file) {
         String errorMessage;
         switch (this.mode) {
-        case PLAY:
-            errorMessage = "AudioPlayer Error: Can't record in play mode.";
-            sendErrorStatus(MEDIA_ERR_ABORTED, errorMessage);
-            break;
-        case NONE:
-            this.audioFile = file;
-            this.recorder = new MediaRecorder();
-            this.recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            this.recorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS); // RAW_AMR);
-            this.recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC); //AMR_NB);
-            this.tempFile = createAudioFilePath(null);
-            this.recorder.setOutputFile(this.tempFile);
-            try {
-                this.recorder.prepare();
-                this.recorder.start();
-                this.setState(STATE.MEDIA_RUNNING);
-                return;
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            case PLAY:
+                errorMessage = "AudioPlayer Error: Can't record in play mode.";
+                sendErrorStatus(MEDIA_ERR_ABORTED, errorMessage);
+                break;
+            case NONE:
+                this.audioFile = file;
+                this.recorder = new MediaRecorder();
+                this.recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                this.recorder.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS); // RAW_AMR);
+                this.recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC); //AMR_NB);
+                this.tempFile = createAudioFilePath(null);
+                this.recorder.setOutputFile(this.tempFile);
+                try {
+                    this.recorder.prepare();
+                    this.recorder.start();
+                    this.setState(STATE.MEDIA_RUNNING);
+                    return;
+                } catch (IllegalStateException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
-            sendErrorStatus(MEDIA_ERR_ABORTED, null);
-            break;
-        case RECORD:
-            errorMessage = "AudioPlayer Error: Already recording.";
-            sendErrorStatus(MEDIA_ERR_ABORTED, errorMessage);
+                sendErrorStatus(MEDIA_ERR_ABORTED, null);
+                break;
+            case RECORD:
+                errorMessage = "AudioPlayer Error: Already recording.";
+                sendErrorStatus(MEDIA_ERR_ABORTED, errorMessage);
         }
     }
 
@@ -257,42 +257,42 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         }
         // more than one file so the user must have pause recording. We'll need to concat files.
         else {
-          FileOutputStream outputStream = null;
-          try {
-              outputStream = new FileOutputStream(new File(file));
-              FileInputStream inputStream = null;
-              File inputFile = null;
-              for (int i = 0; i < size; i++) {
-                  try {
-                      inputFile = new File(this.tempFiles.get(i));
-                      inputStream = new FileInputStream(inputFile);
-                      copy(inputStream, outputStream, (i>0));
-                  } catch(Exception e) {
-                      LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
-                  } finally {
-                      if (inputStream != null) try {
-                          inputStream.close();
-                          inputFile.delete();
-                          inputFile = null;
-                      } catch (Exception e) {
-                          LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
-                      }
-                  }
-              }
-          } catch(Exception e) {
-              e.printStackTrace();
-          } finally {
-              if (outputStream != null) try {
-                  outputStream.close();
-              } catch (Exception e) {
-                  LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
-              }
-          }
+            FileOutputStream outputStream = null;
+            try {
+                outputStream = new FileOutputStream(new File(file));
+                FileInputStream inputStream = null;
+                File inputFile = null;
+                for (int i = 0; i < size; i++) {
+                    try {
+                        inputFile = new File(this.tempFiles.get(i));
+                        inputStream = new FileInputStream(inputFile);
+                        copy(inputStream, outputStream, (i>0));
+                    } catch(Exception e) {
+                        LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
+                    } finally {
+                        if (inputStream != null) try {
+                            inputStream.close();
+                            inputFile.delete();
+                            inputFile = null;
+                        } catch (Exception e) {
+                            LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
+                        }
+                    }
+                }
+            } catch(Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (outputStream != null) try {
+                    outputStream.close();
+                } catch (Exception e) {
+                    LOG.e(LOG_TAG, e.getLocalizedMessage(), e);
+                }
+            }
         }
     }
 
     private static long copy(InputStream from, OutputStream to, boolean skipHeader)
-                throws IOException {
+        throws IOException {
         byte[] buf = new byte[8096];
         long total = 0;
         if (skipHeader) {
@@ -355,7 +355,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * @param output            Type of output device: speaker/earpiece/no change
      */
     public void startPlaying(String file, String output) {
-        if (output != null && !output.equals(OUTPUT_NO_CHANGE)) {
+        if (output != null) {
             this.outputType = output;
         }
         if (this.readyPlayer(file) && this.player != null) {
@@ -465,13 +465,13 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
 
     /**
-      * Get the duration of the audio file.
-      *
-      * @param file             The name of the audio file.
-      * @return                 The duration in msec.
-      *                             -1=can't be determined
-      *                             -2=not allowed
-      */
+     * Get the duration of the audio file.
+     *
+     * @param file             The name of the audio file.
+     * @return                 The duration in msec.
+     *                             -1=can't be determined
+     *                             -2=not allowed
+     */
     public float getDuration(String file) {
 
         // Can't get duration of recording
@@ -700,14 +700,16 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * Sets output device to earpiece or speaker
      */
     private void setOutput() {
-        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        boolean isSpeakerphone = !this.outputType.equals(OUTPUT_EARPIECE);
-        audioManager.setSpeakerphoneOn(isSpeakerphone);
-        if (this.player != null) {
-            if (isSpeakerphone) {
-                this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            } else {
-                this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+        if (!OUTPUT_NO_CHANGE.equals(this.outputType)) {
+            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            boolean isSpeakerphone = OUTPUT_SPEAKER.equals(this.outputType);
+            audioManager.setSpeakerphoneOn(isSpeakerphone);
+            if (this.player != null) {
+                if (isSpeakerphone) {
+                    this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                } else {
+                    this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+                }
             }
         }
         LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
@@ -753,7 +755,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
             // Get duration
             this.duration = getDurationInSeconds();
-            }
+        }
     }
 
     private void sendErrorStatus(int errorCode, String errorMessage) {
