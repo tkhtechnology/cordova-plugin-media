@@ -102,6 +102,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private boolean prepareOnly = true;     // playback after file prepare flag
     private int seekOnPrepared = 0;     // seek to this location once media is prepared
     private float setRateOnPrepared = -1;
+    private int streamType = AudioManager.STREAM_MUSIC;
 
     /**
      * Constructor.
@@ -353,9 +354,11 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      *
      * @param file              The name of the audio file.
      * @param output            Type of output device: speaker/earpiece/no change
+     * @param streamType        Type of stream based on AudioManager's stream types
      */
-    public void startPlaying(String file, String output) {
-        if (output != null) {
+    public void startPlaying(String file, String output, int streamType) {
+        this.streamType = streamType;
+        if (output != null && !output.equals(OUTPUT_NO_CHANGE)) {
             this.outputType = output;
         }
         if (this.readyPlayer(file) && this.player != null) {
@@ -419,7 +422,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * Resume playing.
      */
     public void resumePlaying() {
-        this.startPlaying(this.audioFile, OUTPUT_NO_CHANGE);
+        this.startPlaying(this.audioFile, OUTPUT_NO_CHANGE, this.streamType);
     }
 
     /**
@@ -487,7 +490,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         // If no player yet, then create one
         else {
             this.prepareOnly = true;
-            this.startPlaying(file, OUTPUT_NO_CHANGE);
+            this.startPlaying(file, OUTPUT_NO_CHANGE, this.streamType);
 
             // This will only return value for local, since streaming
             // file hasn't been read yet.
@@ -725,7 +728,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private void loadAudioFile(String file) throws IllegalArgumentException, SecurityException, IllegalStateException, IOException {
         if (this.isStreaming(file)) {
             this.player.setDataSource(file);
-            this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            this.player.setAudioStreamType(this.streamType);
             //if it's a streaming file, play mode is implied
             this.setMode(MODE.PLAY);
             this.setState(STATE.MEDIA_STARTING);
