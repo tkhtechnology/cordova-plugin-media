@@ -91,7 +91,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private STATE state = STATE.MEDIA_NONE; // State of recording or playback
 
     private String audioFile = null;        // File name to play or record to
-    private String outputType = OUTPUT_SPEAKER; // Output device: speaker/earpiece
+    private String outputType = OUTPUT_NO_CHANGE; // Output device: speaker/earpiece
     private float duration = -1;            // Duration of audio
 
     private MediaRecorder recorder = null;  // Audio recording object
@@ -703,10 +703,18 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
      * Sets output device to earpiece or speaker
      */
     private void setOutput() {
-        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        boolean isSpeakerphone = !this.outputType.equals(OUTPUT_EARPIECE);
-        audioManager.setSpeakerphoneOn(isSpeakerphone);
-        this.player.setAudioStreamType(this.streamType);
+        if (!OUTPUT_NO_CHANGE.equals(this.outputType)) {
+            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            boolean isSpeakerphone = OUTPUT_SPEAKER.equals(this.outputType);
+            audioManager.setSpeakerphoneOn(isSpeakerphone);
+            if (this.player != null) {
+                if (isSpeakerphone) {
+                    this.player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                } else {
+                    this.player.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+                }
+            }
+        }
         LOG.d(LOG_TAG, "Set speakerphone to " + this.outputType);
     }
 
